@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Prachi’s Surprise 🌸</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Comic Sans MS', cursive;
+      background: radial-gradient(circle, #ffe4ec 0%, #fce1ff 100%);
+      overflow: hidden;
+    }
+
+    .floating-emoji {
+      position: absolute;
+      bottom: -50px;
+      font-size: 24px;
+      opacity: 0.8;
+      animation: floatUp 6s linear infinite;
+      user-select: none;
+    }
+
+    @keyframes floatUp {
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(-120vh); opacity: 0; }
+    }
+
+    .container {
+      text-align: center;
+      padding: 40px;
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 0 20px pink;
+      margin-top: 80px;
+      position: relative;
+      z-index: 2;
+    }
+
+    h2 {
+      color: #ff4da6;
+    }
+
+    .score {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      font-size: 30px;
+      color: #d63384;
+      font-weight: bold;
+      z-index: 3;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); color: #d63384; }
+      50% { transform: scale(1.2); color: #ff69b4; }
+      100% { transform: scale(1); color: #d63384; }
+    }
+
+    .calendar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .day {
+      width: 60px;
+      height: 60px;
+      background: #ffe6f2;
+      margin: 5px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: transform 0.2s ease, background 0.2s ease;
+      box-shadow: 0 0 4px #f8c3dc;
+    }
+
+    .day.selected {
+      background: #ff69b4;
+      color: white;
+      box-shadow: 0 0 10px #ff69b4;
+      transform: scale(1.1);
+    }
+
+    button {
+      background: #ff4da6;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #ff85c1;
+    }
+
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 0 20px pink;
+      text-align: center;
+      z-index: 10;
+      display: none;
+    }
+
+    .popup h3 {
+      color: #e84393;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 5;
+      display: none;
+    }
+
+    .hint {
+      font-size: 14px;
+      color: #555;
+      margin-top: 10px;
+    }
+
+    #emoji-container {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .popup img {
+      width: 150px;
+      margin-bottom: 15px;
+      border-radius: 10px;
+    }
+
+    #tryagain-btn {
+      background: #999;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="score">Score: <span id="score">0</span></div>
+
+  <div class="container" id="terms-box">
+    <h2>💕 Game Terms 💕</h2>
+    <p>The higher the score, the more you love me! 💘</p>
+    <p>Your score starts based on your login password attempts.</p>
+    <p>Now you'll guess 2 special dates! 📅</p>
+    <label>
+      <input type="checkbox" id="accept-terms" /> Yes, I accept the terms and I love you ❤️
+    </label>
+    <br><br>
+    <button onclick="acceptTerms()">Continue</button>
+  </div>
+
+  <div class="container" id="calendar-box" style="display:none;">
+    <h2>💕 Select 2 Special Dates 💕</h2>
+    <p class="hint">Hint: Choose 2 dates from 1 to 31, then click Confirm</p>
+    <div class="calendar" id="calendar"></div>
+    <button onclick="confirmDates()">Confirm</button>
+  </div>
+
+  <div class="popup" id="popup-msg">
+    <img src="cat-cute.gif" alt="Cute Cat" id="gif-img" style="display: none;" />
+    <h3 id="popup-text">🎉 Yay!</h3>
+    <button id="continue-btn" onclick="goNext()">Continue</button>
+    <button id="tryagain-btn" onclick="closePopup()">Try Again</button>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+  <div id="emoji-container"></div>
+
+  <!-- Music & Sound -->
+  <audio id="bg-music" loop autoplay>
+    <source src="all.mp3" type="audio/mpeg" />
+  </audio>
+  <audio id="select-sound">
+    <source src="selection.mp3" type="audio/mpeg" />
+  </audio>
+
+  <script>
+    const scoreEl = document.getElementById('score');
+    const calendarBox = document.getElementById('calendar-box');
+    const termsBox = document.getElementById('terms-box');
+    const popup = document.getElementById('popup-msg');
+    const overlay = document.getElementById('overlay');
+    const popupText = document.getElementById('popup-text');
+    const gifImg = document.getElementById('gif-img');
+    const continueBtn = document.getElementById('continue-btn');
+    const tryAgainBtn = document.getElementById('tryagain-btn');
+    const bgMusic = document.getElementById('bg-music');
+    const selectSound = document.getElementById('select-sound');
+
+    let selectedDates = [];
+    const correctDates = [17, 24];
+    let score = 0;
+
+    const volume = sessionStorage.getItem('bgVolume') || 0.1;
+    bgMusic.volume = volume;
+    selectSound.volume = volume;
+    document.addEventListener('click', () => {
+      if (bgMusic.paused) bgMusic.play().catch(() => {});
+    });
+
+    const savedAttempts = Number(sessionStorage.getItem("wrongPasswordAttempts")) || 0;
+    if (savedAttempts <= 2) score += 10;
+    else if (savedAttempts <= 7) score += 5;
+    else if (savedAttempts <= 10) score += 1;
+    scoreEl.textContent = score;
+
+    const calendar = document.getElementById('calendar');
+    for (let i = 1; i <= 31; i++) {
+      const day = document.createElement('div');
+      day.classList.add('day');
+      day.textContent = i;
+      day.onclick = () => {
+        playSound();
+        day.classList.add('clicked');
+        if (selectedDates.includes(i)) {
+          selectedDates = selectedDates.filter(d => d !== i);
+          day.classList.remove('selected');
+        } else {
+          if (selectedDates.length < 2) {
+            selectedDates.push(i);
+            day.classList.add('selected');
+          }
+        }
+      };
+      calendar.appendChild(day);
+    }
+
+    function acceptTerms() {
+      playSound();
+      const checkbox = document.getElementById('accept-terms');
+      if (checkbox.checked) {
+        termsBox.style.display = 'none';
+        calendarBox.style.display = 'block';
+      } else {
+        showPopup("Please accept the terms to continue 💔", false);
+      }
+    }
+
+    function confirmDates() {
+      playSound();
+      if (selectedDates.length !== 2) {
+        showPopup("Please select exactly 2 dates! 🗓️", false);
+        return;
+      }
+      const correct = selectedDates.includes(17) && selectedDates.includes(24);
+      if (correct) {
+        score += 10;
+        scoreEl.textContent = score;
+        showPopup("🎉 You're perfect! You remembered both! 💖", true);
+      } else {
+        score -= 1;
+        scoreEl.textContent = score;
+        showPopup("😢 Wrong dates... try again!", false);
+        resetSelections();
+      }
+    }
+
+    function resetSelections() {
+      selectedDates = [];
+      document.querySelectorAll('.day.selected').forEach(el => el.classList.remove('selected'));
+    }
+
+    function showPopup(text, isSuccess) {
+      popupText.textContent = text;
+      popup.style.display = 'block';
+      overlay.style.display = 'block';
+      if (isSuccess) {
+        gifImg.style.display = 'block';
+        continueBtn.style.display = 'inline-block';
+        tryAgainBtn.style.display = 'none';
+      } else {
+        gifImg.style.display = 'none';
+        continueBtn.style.display = 'none';
+        tryAgainBtn.style.display = 'inline-block';
+      }
+    }
+
+    function closePopup() {
+      popup.style.display = 'none';
+      overlay.style.display = 'none';
+    }
+
+    function goNext() {
+      // Save score to sessionStorage
+      sessionStorage.setItem('score', score);
+
+      // Save music time and volume
+      sessionStorage.setItem('bgMusicTime', bgMusic.currentTime);
+      sessionStorage.setItem('bgVolume', bgMusic.volume);
+
+      // Redirect to next page
+      window.location.href = "next1.html";
+    }
+
+    function playSound() {
+      selectSound.currentTime = 0;
+      selectSound.play().catch(() => {});
+    }
+
+    const emojis = ["💖", "🌸", "💕", "💫", "💘", "💗", "❣️", "❤️"];
+    const emojiContainer = document.getElementById('emoji-container');
+    setInterval(() => {
+      const emoji = document.createElement("div");
+      emoji.className = "floating-emoji";
+      emoji.style.left = Math.random() * 100 + "vw";
+      emoji.style.fontSize = (20 + Math.random() * 20) + "px";
+      emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      emoji.style.animationDuration = (6 + Math.random() * 4) + "s";
+      emojiContainer.appendChild(emoji);
+      setTimeout(() => emoji.remove(), 10000);
+    }, 500);
+  </script>
+</body>
+</html>
